@@ -1,0 +1,10 @@
+{
+    "workbench.colorCustomizations": {
+        "titleBar.activeBackground": "#eee",
+        "titleBar.activeForeground": "#222",
+    },
+    "breadcrumbs.enabled": false,
+    "svelte.plugin.svelte.format.config.singleQuote": true,
+    "javascript.preferences.quoteStyle": "single",
+    "files.insertFinalNewline": true,
+}
