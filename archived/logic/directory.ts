@@ -97,8 +97,6 @@ class Directory<T extends ObjectLiteral>{
     public insert(key: HashValue, value: HashRecord<T>, reinserted: boolean = false): void {
         const bucketIndex = this.hash(key);
         const bucket = this._buckets[bucketIndex];
-        console.log(this._buckets);
-        console.log(this._buckets);
         const result = bucket.insert(key, value);
         if (result.ok) {
             if (!reinserted)

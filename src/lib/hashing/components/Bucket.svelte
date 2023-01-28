@@ -1,7 +1,7 @@
 <script lang="ts">
   import Record from './Record.svelte';
   import type { BucketData, BucketState } from '../bucket';
-    import type { Writable } from 'svelte/store';
+  import type { Writable } from 'svelte/store';
 
   export let state: Writable<BucketState>;
   export let data: Writable<BucketData>;
@@ -10,7 +10,7 @@
 <div>
   <p>id: {$state.id} | depth: {$state.depth}</p>
   <div class="records">
-    {#each [...$data] as [hash, record] (hash)}
+    {#each $data.items as record (record.identity)}
       <Record state={record.state.asStore} data={record.data.asStore} />
     {/each}
   </div>

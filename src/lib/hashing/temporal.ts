@@ -1,4 +1,5 @@
-import { type InstanceState, type SincronizedState, sincronizedState, type BasicOperations, FilledTuple, type FilledTupleInitilization, InsertError, Identity, RemoveError, UpdateError, SearchError } from '$lib/hashing/general';
+import { type HashValue, type InstanceState, type SincronizedState, sincronizedState, type BasicOperations, FilledTuple, type FilledTupleInitilization } from '$lib/hashing/general';
+import { logAsJson } from '$lib/utils/funtions';
 import type { ObjectLiteral, Values } from '$lib/utils/types';
 import { Err, Ok, Result } from 'ts-results';
 import { HashRecord } from './record';
@@ -13,7 +14,7 @@ export type BucketState = InstanceState<{
 export type BucketData<T extends ObjectLiteral = ObjectLiteral> = FilledTuple<HashRecord<T>>;
 
 
-class HashBucket<T extends ObjectLiteral> implements BasicOperations{
+class HashBucket<T extends ObjectLiteral>{
     private static newCount: number = 0;
     readonly state: SincronizedState<BucketState>;
     readonly data: SincronizedState<BucketData<T>>;
@@ -36,7 +37,8 @@ class HashBucket<T extends ObjectLiteral> implements BasicOperations{
         if (initialValue)
             config.value = initialValue.items;
         else
-            config.factory = (i, _) => new HashRecord<T>();
+            config.factory = (i,_) => new HashRecord<T>();
+
         this.data = sincronizedState(new FilledTuple(config));
 
         HashBucket.newCount += 1;
@@ -50,10 +52,10 @@ class HashBucket<T extends ObjectLiteral> implements BasicOperations{
         return this.state.value.id;
     }
     public get isFull(): boolean {
-        return this.data.value.isFull;
+        return this.data.value.isFull
     }
     public get isEmpty(): boolean {
-        return this.data.value.isEmpty;
+        return this.data.value.isEmpty
     }
     public get depth(): number {
         return this.state.value.depth;
@@ -65,45 +67,43 @@ class HashBucket<T extends ObjectLiteral> implements BasicOperations{
         return this.state.update(state => { state.depth -= 1; return state; }).depth;
     }
 
-    public insert(hash: Identity, record: HashRecord<T>): Result<true, Values<typeof InsertError>> {
-        return this.data.value
-            .insert(record)
-            .andThen(_ => {
-                this.data.update(data => data);
-                return new Ok(true);
-            });
+    public insert(hash: HashValue, record: HashRecord<T>): Result<true, Values<typeof InsertError>> {
+        if (this.data.value.has(hash))
+            return new Err(InsertError.alreadyExists);
+        if (this.isFull)
+            return new Err(InsertError.isFull);
+        this.data.update(data => { data.set(hash, record); return data; });
+        return new Ok(true);
     }
 
-    public remove(hash: Identity): Result<true, Values<typeof RemoveError>> {
-        return this.data.value
-            .remove(hash)
-            .andThen(_ => {
-                this.data.update(e => e);
-                return new Ok(true);
-            });
+    public remove(hash: HashValue): Result<true, Values<typeof RemoveError>> {
+        if (this.data.value.delete(hash))
+            this.data.update(e => e);
+        return new Ok(true);
+        return new Err(RemoveError.notExists);
     }
 
-    public update(hash: Identity, record: HashRecord<T>): Result<true, Values<typeof UpdateError>> {
-        return this.data.value
-            .update(hash, record)
-            .andThen(_ => {
-                this.data.update(e => e);
-                return new Ok(true);
-            });
+    public update(hash: HashValue, record: HashRecord<T>): Result<true, Values<typeof UpdateError>> {
+        const old_record = this.data.value.get(hash);
+        if (!old_record)
+            return new Err(UpdateError.notExists);
+        old_record.updateDataFrom(record);
+        return new Ok(true);
     }
 
-    public search(hash: Identity): Result<HashRecord<T>, Values<typeof SearchError>> {
-        return this.data.value
-            .search(hash)
-            .map(([_, record]) => record);
+    public search(hash: HashValue): Result<HashRecord<T>, typeof OperationError.notExists> {
+        const value = this.data.value.get(hash);
+        if (!value)
+            return new Err(OperationError.notExists);
+        return new Ok(value);
     }
 
-    public copyValues(): HashRecord<T>[] {
-        return [...this.data.value.items];
+    public copyValues(): Map<HashValue, HashRecord<T>> {
+        return new Map(this.data.value.entries());
     }
 
     public clear(): void {
-        this.data.value.forEach(item => item.setAsGarbage())
+        this.data.value.clear();
     }
 
     public log(): void {

@@ -56,7 +56,6 @@ class HashDirectory<T extends ObjectLiteral>{
     }
     private createBucket(depth: number): HashBucket<T> {
         this.#state.incrementalId += 1;
-        console.log(this.#state.incrementalId);
         this.state.update(value => value)
         return new HashBucket<T>(depth, this.#state.bucketSize, this.#state.incrementalId);
     }
@@ -136,8 +135,6 @@ class HashDirectory<T extends ObjectLiteral>{
     public insert(key: HashValue, value: HashRecord<T>, reinserted: boolean = false): void {
         const bucketIndex = this.hash(key);
         const bucket = this.#data[bucketIndex];
-        console.log(this.#data);
-        console.log(this.#data);
         const result = bucket.insert(key, value);
         if (result.ok) {
             if (!reinserted)
