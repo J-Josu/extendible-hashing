@@ -1,9 +1,10 @@
 export type Values<T> = T[keyof T];
 
 export type ObjectLiteral = Record<string, any>;
+export type PrimitiveObjectLiteral = Record<string, boolean | number | string>;
 
 // type base<T extends { val?: never;[K: PropertyKey]: unknown; }> = { val: number; } & T;
-export type OmitKeys<T extends object> = { [P in keyof T]?: never } & { [K: PropertyKey]: unknown; }
+export type OmitKeys<T extends object> = { [P in keyof T]?: never } & { [K: PropertyKey]: unknown; };
 
 type ImmutablePrimitive = undefined | null | boolean | string | number | Function;
 export type Immutable<T> =

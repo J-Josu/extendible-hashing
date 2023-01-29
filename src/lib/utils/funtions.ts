@@ -1,8 +1,26 @@
-export const objectKeys = <T extends object>(obj: T): (keyof T)[] => {
+export function logAsJson(value: any) {
+    console.log(JSON.stringify(value, null, 2));
+}
+
+
+export function objectKeys<T extends object>(obj: T): (keyof T)[] {
     return Object.keys(obj) as (keyof T)[];
 };
 
-export const logAsJson = (value: any) => console.log(JSON.stringify(value, null, 2));
+
+export function isBoolean(type: string): type is 'boolean' {
+    return type === 'boolean';
+}
+
+export function isNumber(type: string): type is 'number' {
+    return type === 'number';
+}
+
+export function isString(type: string): type is 'string' {
+    return type === 'string';
+}
+
+
 
 const baseBinarySearch = <T>(arr: T[], value: T): [boolean, number] => {
     let start = 0;
@@ -19,4 +37,3 @@ const baseBinarySearch = <T>(arr: T[], value: T): [boolean, number] => {
     }
     return [false, -1];
 };
-

@@ -1,19 +1,20 @@
 import { type InstanceState, type SincronizedState, sincronizedState, Identity, type TupleItemTrait } from '$lib/hashing/general';
-import type { ObjectLiteral, Values } from '$lib/utils/types';
+import type { ObjectLiteral, PrimitiveObjectLiteral, Values } from '$lib/utils/types';
 import { objectKeys } from '$lib/utils/funtions';
 import { Err, Ok, type Result } from 'ts-results';
+import { dataController } from './data';
 
-const EqualityError = {
+export const EqualityError = {
     notInitialazed: 'NOT_INITIALAZED',
     otherRecord: 'OTHER_RECORD'
 } as const;
 
 export type RecordState = InstanceState<{ hash: Identity; isGarbage: boolean; }>;
 
-export type RecordData<T extends ObjectLiteral> = T;
+export type RecordData<T extends PrimitiveObjectLiteral> = T;
 
 
-class HashRecord<T extends ObjectLiteral> implements TupleItemTrait<Identity, HashRecord<T>> {
+class HashRecord<T extends PrimitiveObjectLiteral> implements TupleItemTrait<Identity, HashRecord<T>> {
     static readonly EqualityError = EqualityError;
     private static newCount: number = 0;
     readonly state: SincronizedState<RecordState>;
@@ -28,7 +29,7 @@ class HashRecord<T extends ObjectLiteral> implements TupleItemTrait<Identity, Ha
         });
 
         // this could cause that a a property doesnt update beacuse the key not exist if the object starts empty
-        this.data = sincronizedState(initialValue ?? {} as T);
+        this.data = sincronizedState(initialValue ?? dataController.generateData() as T);
         HashRecord.newCount += 1;
     }
 

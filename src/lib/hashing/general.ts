@@ -56,6 +56,7 @@ export function sincronizedState<T>(initialValue: T): SincronizedState<T> {
     };
 }
 
+
 export const InsertError = {
     alreadyExists: 'ALREADY_EXISTS',
     isFull: 'IS_FULL',
@@ -259,6 +260,7 @@ class FilledTuple<T extends TupleItemTrait<I, T>, I extends Identity = Identity>
         );
     }
 }
+
 
 export { Identity };
 export type { TupleItemTrait };

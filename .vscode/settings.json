@@ -6,5 +6,6 @@
     "breadcrumbs.enabled": false,
     "svelte.plugin.svelte.format.config.singleQuote": true,
     "javascript.preferences.quoteStyle": "single",
+    "files.trimFinalNewlines": true,
     "files.insertFinalNewline": true,
 }

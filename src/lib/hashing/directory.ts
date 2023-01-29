@@ -1,6 +1,6 @@
 import { Err, Ok, Result } from 'ts-results';
 import { HashBucket } from './bucket';
-import { HashRecord } from './record';
+import type { HashRecord } from './record';
 import type { ObjectLiteral } from '$lib/utils/types';
 import { type InstanceState, type SincronizedState, sincronizedState, type BasicOperations, Identity, InsertError, FilledTuple } from '$lib/hashing/general';
 
@@ -56,16 +56,7 @@ class HashDirectory<T extends ObjectLiteral> implements BasicOperations {
         return new HashBucket<T>(
             depth,
             this.state.value.bucketSize,
-            this.state.value.incrementalId,
-            new FilledTuple({
-                length: this.state.value.bucketSize,
-                value: [
-                    new HashRecord(99, { id: 1, double: 1 * 2 }),
-                    new HashRecord(98, { id: 2, double: 2 * 2 }),
-                    new HashRecord(49, { id: 3, double: 3 * 2 }),
-                    new HashRecord(59, { id: 4, double: 4 * 2 })
-                ]
-            })
+            this.state.value.incrementalId
         );
     }
 
