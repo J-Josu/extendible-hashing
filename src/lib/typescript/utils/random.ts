@@ -1,12 +1,12 @@
 const MAX_VALUE = 1_000_000_000;
 
-const values = new Set<number>();
+const usedUniqueValues = new Set<number>();
 
 export const uniqueValue = () => {
     let newValue = Math.floor(Math.random() * MAX_VALUE);
-    while (newValue in values)
+    while (newValue in usedUniqueValues)
         newValue = Math.floor(Math.random() * MAX_VALUE);
-    values.add(newValue);
+    usedUniqueValues.add(newValue);
     return newValue;
 };
 
@@ -36,10 +36,12 @@ const randomString = (length: number): string => {
         .slice(2, 2 + length);
 };
 
-export const random = {
+const randomUtils = {
     setMaxNumber: setMaxNumber,
     boolean: randomBoolean,
     integer: randomInteger,
     float: randomFloat,
     string: randomString
 } as const;
+
+export { randomUtils as Random }

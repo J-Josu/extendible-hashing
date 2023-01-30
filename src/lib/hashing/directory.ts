@@ -1,8 +1,10 @@
 import { Err, Ok, Result } from 'ts-results';
 import { HashBucket } from './bucket';
-import type { HashRecord } from './record';
-import type { ObjectLiteral } from '$lib/utils/types';
-import { type InstanceState, type SincronizedState, sincronizedState, type BasicOperations, Identity, InsertError, FilledTuple } from '$lib/hashing/general';
+import { HashRecord } from './record';
+import type { ObjectLiteral } from '$lib/typescript/utils/types';
+import { type InstanceState, type SincronizedState, sincronizedState, type BasicOperations } from '$lib/hashing/general';
+import { Identity } from '$lib/typescript/filled-tuple';
+import { InsertError } from '$lib/typescript/errors';
 
 export type DirectoryState = InstanceState<{
     globalDepth: number,
@@ -24,35 +26,28 @@ class HashDirectory<T extends ObjectLiteral> implements BasicOperations {
             isNew: true,
             globalDepth: depth > 0 ? depth : 0,
             bucketSize,
-            incrementalId: 0,
+            incrementalId: -1,
             lastRead: -1
         });
-        // let count = 0;
-        // const placeHolders = new Array(size).fill(new HashRecord(count++, { val1: 1, val2: 2 }));
+
         this.data = sincronizedState([] as DirectoryData<T>);
 
         for (let i = 0; i < 1 << depth; i++) {
-            this.data.value.push(this.createBucket(depth));
+            // this.data.value.push(this.createBucket(depth));
+            this.data.update(data => {
+                data.push(this.createBucket(depth));
+                return data;
+            });
         }
-
-        // this.data.update((value) => value)
     }
 
     public get buckets() {
         return this.data.value;
     }
+
     private createBucket(depth: number): HashBucket<T> {
-        this.state.value.incrementalId += 1;
-        this.state.update(value => value);
-        // console.log(new FilledTuple({
-        //     length: this.state.value.bucketSize,
-        //     value: [
-        //         { id: 1, double: this.state.value.incrementalId * 2 },
-        //         { id: 2, double: this.state.value.incrementalId * 2 },
-        //         { id: 3, double: this.state.value.incrementalId * 2 },
-        //         { id: 4, double: this.state.value.incrementalId * 2 }
-        //     ]
-        // }))
+        this.state.update(state => { state.incrementalId += 1; return state; });
+
         return new HashBucket<T>(
             depth,
             this.state.value.bucketSize,
@@ -61,10 +56,11 @@ class HashDirectory<T extends ObjectLiteral> implements BasicOperations {
     }
 
     private hash(key: number): [number, Identity] {
-        const hashed = key & ((1 << this.state.value.globalDepth) - 1);
+        const index = key & ((1 << this.state.value.globalDepth) - 1);
+
         return [
-            hashed,
-            new Identity(key, hashed)
+            index,
+            new Identity(key, key)
         ];
     }
 
@@ -73,10 +69,13 @@ class HashDirectory<T extends ObjectLiteral> implements BasicOperations {
     }
 
     private grow(): void {
-        for (let i = 0; i < 1 << this.state.value.globalDepth; i++)
-            this.data.value.push(this.data.value[i]);
-        this.state.value.globalDepth++;
-        this.state.update(value => value);
+        this.data.update(data => {
+            for (let i = 0; i < 1 << this.state.value.globalDepth; i++)
+                data.push(data[i]);
+            return data;
+        });
+
+        this.state.update(state => { state.globalDepth += 1; return state; });
     }
 
     private shrink(): void {
@@ -100,6 +99,7 @@ class HashDirectory<T extends ObjectLiteral> implements BasicOperations {
 
         const oldRecords = this.data.value[bucketIndex].copyValues();
         this.data.value[bucketIndex].clear();
+        // this.data.value[pairIndex].clear()
 
         const indexDiff = 1 << localDepth;
         const dirSize = 1 << this.state.value.globalDepth;
@@ -110,7 +110,7 @@ class HashDirectory<T extends ObjectLiteral> implements BasicOperations {
             this.data.value[i] = this.data.value[pairIndex];
 
         for (const value of oldRecords)
-            this.insert(value.identity.base, value, true);
+            this.insert(value.identity?.baseValue!, value.data.value, true);
 
         this.state.update(value => value);
         this.data.update((value) => value);
@@ -136,10 +136,11 @@ class HashDirectory<T extends ObjectLiteral> implements BasicOperations {
         }
     }
 
-    public insert(key: number, value: HashRecord<T>, reinserted: boolean = false): void {
+    public insert(key: number, value: T, reinserted: boolean = false): void {
         const [bucketIndex, identity] = this.hash(key);
         const bucket = this.data.value[bucketIndex];
-        const result = bucket.insert(identity, value);
+
+        const result = bucket.insert(identity, new HashRecord(identity, value));
         if (result.ok) {
             if (!reinserted)
                 console.log(`Inserted key ${key} in bucket ${bucket.id}`);

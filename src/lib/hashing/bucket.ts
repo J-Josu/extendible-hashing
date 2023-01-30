@@ -1,5 +1,7 @@
-import { type InstanceState, type SincronizedState, sincronizedState, type BasicOperations, FilledTuple, type FilledTupleInitilization, InsertError, Identity, RemoveError, UpdateError, SearchError } from '$lib/hashing/general';
-import type { ObjectLiteral, Values } from '$lib/utils/types';
+import { type InstanceState, type SincronizedState, sincronizedState, type BasicOperations } from '$lib/hashing/general';
+import type { InsertError, RemoveError, SearchError, UpdateError } from '$lib/typescript/errors';
+import { FilledTuple, Identity, type FilledTupleInitilization } from '$lib/typescript/filled-tuple';
+import type { ObjectLiteral, Values } from '$lib/typescript/utils/types';
 import { Err, Ok, Result } from 'ts-results';
 import { HashRecord } from './record';
 
@@ -13,7 +15,7 @@ export type BucketState = InstanceState<{
 export type BucketData<T extends ObjectLiteral = ObjectLiteral> = FilledTuple<HashRecord<T>>;
 
 
-class HashBucket<T extends ObjectLiteral> implements BasicOperations{
+class HashBucket<T extends ObjectLiteral> implements BasicOperations {
     private static newCount: number = 0;
     readonly state: SincronizedState<BucketState>;
     readonly data: SincronizedState<BucketData<T>>;
@@ -27,16 +29,14 @@ class HashBucket<T extends ObjectLiteral> implements BasicOperations{
             nrr: nrr ?? HashBucket.newCount
         });
 
-        // let count = 0;
-        // const placeHolders = new Array(size).fill(new HashRecord(count++, { val1: 1, val2: 2 }));
-        // const [dataStore, dataRef] = valuedWritable(new Map<HashValue, HashRecord<T>>(placeHolders.map((value, i) => [i, value])));
         const config = {
-            length: size
+            length: size,
         } as FilledTupleInitilization<HashRecord<T>>;
         if (initialValue)
-            config.value = initialValue.items;
+            config.initialItems = initialValue.items;
         else
-            config.factory = (i, _) => new HashRecord<T>();
+            config.itemFactory = (i, _) => new HashRecord<T>();
+
         this.data = sincronizedState(new FilledTuple(config));
 
         HashBucket.newCount += 1;
@@ -94,7 +94,7 @@ class HashBucket<T extends ObjectLiteral> implements BasicOperations{
 
     public search(hash: Identity): Result<HashRecord<T>, Values<typeof SearchError>> {
         return this.data.value
-            .search(hash)
+            .find(hash)
             .map(([_, record]) => record);
     }
 
@@ -103,7 +103,11 @@ class HashBucket<T extends ObjectLiteral> implements BasicOperations{
     }
 
     public clear(): void {
-        this.data.value.forEach(item => item.setAsGarbage())
+        this.data.update(data => {
+            data.clear()
+            return data;
+        })
+        // this.data.value.forEach(item => item.setAsGarbage());
     }
 
     public log(): void {

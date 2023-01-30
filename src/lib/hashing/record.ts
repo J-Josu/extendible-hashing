@@ -1,68 +1,92 @@
-import { type InstanceState, type SincronizedState, sincronizedState, Identity, type TupleItemTrait } from '$lib/hashing/general';
-import type { ObjectLiteral, PrimitiveObjectLiteral, Values } from '$lib/utils/types';
-import { objectKeys } from '$lib/utils/funtions';
+import type { Identity, FilledTupleItemTrait } from '$lib/typescript/filled-tuple';
+import type { PrimitiveObjectLiteral, Values } from '$lib/typescript/utils/types';
+import { objectKeys } from '$lib/typescript/utils/functions';
 import { Err, Ok, type Result } from 'ts-results';
 import { dataController } from './data';
+import { sincronizedState, type InstanceState, type SincronizedState } from './general';
 
 export const EqualityError = {
     notInitialazed: 'NOT_INITIALAZED',
     otherRecord: 'OTHER_RECORD'
 } as const;
 
-export type RecordState = InstanceState<{ hash: Identity; isGarbage: boolean; }>;
+export type RecordState = InstanceState<{ hash?: Identity; isGarbage: boolean; }>;
 
 export type RecordData<T extends PrimitiveObjectLiteral> = T;
 
 
-class HashRecord<T extends PrimitiveObjectLiteral> implements TupleItemTrait<Identity, HashRecord<T>> {
+class HashRecord<T extends PrimitiveObjectLiteral> implements FilledTupleItemTrait<HashRecord<T>> {
     static readonly EqualityError = EqualityError;
     private static newCount: number = 0;
+
     readonly state: SincronizedState<RecordState>;
     readonly data: SincronizedState<RecordData<T>>;
 
-    constructor(hash?: number, initialValue?: T) {
+    constructor(hash?: Identity, initialData?: T) {
         this.state = sincronizedState({
             id: HashRecord.newCount,
-            isNew: !initialValue,
-            hash: new Identity(hash ?? HashRecord.newCount, HashRecord.newCount),
-            isGarbage: true
+            isNew: !hash,
+            isGarbage: !hash,
+            hash: hash,
         });
 
-        // this could cause that a a property doesnt update beacuse the key not exist if the object starts empty
-        this.data = sincronizedState(initialValue ?? dataController.generateData() as T);
+        // rethink how this class knows of dataController.generateData 
+        this.data = sincronizedState(initialData ?? dataController.generateData() as T);
         HashRecord.newCount += 1;
     }
 
     get identity() {
-        return this.state.value.hash
+        return this.state.value.hash;
     }
     isGarbage(): boolean {
         return this.state.value.isGarbage;
     }
     setAsGarbage(): void {
-        this.state.update(state => { state.isGarbage = true; return state; });
+        this.state.update(state => {
+            state.isGarbage = true;
+            state.hash = undefined;
+            return state;
+        });
+    }
+    setAsValid(): void {
+        this.state.update(state => { state.isGarbage = false; return state; });
     }
     isItem(otherIdentity: Identity): boolean {
+        if (!this.state.value.hash) return false;
+
         return this.state.value.hash.is(otherIdentity);
     }
-    compareItem(otherIdentity: Identity): 0 | 1 | -1 {
+    compareIdentity(otherIdentity: Identity): -1 | 0 | 1 {
+        return this.state.value.hash!.compare(otherIdentity);
+    }
+    compareItem(otherItem: HashRecord<T>): -1 | 0 | 1 {
         if (this.state.value.isGarbage) return 1;
-        console.log(this.state.value)
-        console.log(otherIdentity)
-        return this.state.value.hash.compare(otherIdentity);
+        
+        return this.state.value.hash!.compare(otherItem.state.value.hash!);
     }
-    updateFromItem(otherItem: HashRecord<T>) {
-        this.state.value.isGarbage = false;
-        this.updateData(this.data.value);
-        this.updateState(otherItem.state.value)
-        return this
+    setFromItem(otherItem: HashRecord<T>): HashRecord<T> {
+        this.updateData(otherItem.data.value);
+        this.updateState(otherItem.state.value);
+        this.setAsValid();
+        return this;
     }
+    // compareItem(otherIdentity: Identity): 0 | 1 | -1 {
+    //     if (this.state.value.isGarbage) return 1;
+
+    //     return this.state.value.hash.compare(otherIdentity);
+    // }
+    // updateFromItem(otherItem: HashRecord<T>) {
+    //     this.updateData(this.data.value);
+    //     this.updateState(otherItem.state.value);
+    //     this.setAsValid()
+    //     return this;
+    // }
 
     is(otherIdentity: Identity): Result<true, Values<typeof HashRecord.EqualityError>> {
         if (this.state.value.isNew) {
             return new Err(HashRecord.EqualityError.notInitialazed);
         }
-        return this.state.value.hash.identity === otherIdentity.identity ? new Ok(true) : new Err(HashRecord.EqualityError.otherRecord);
+        return this.state.value.hash?.is(otherIdentity) ? new Ok(true) : new Err(HashRecord.EqualityError.otherRecord);
     }
 
     get isNew(): boolean {

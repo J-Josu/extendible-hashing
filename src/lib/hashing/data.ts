@@ -1,6 +1,6 @@
-import { isBoolean, isNumber, isString } from '$lib/utils/funtions';
-import { random } from '$lib/utils/random';
-import type { PrimitiveObjectLiteral } from '$lib/utils/types';
+import { isBoolean, isNumber, isString } from '$lib/typescript/utils/functions';
+import { Random } from '$lib/typescript/utils/random';
+import type { PrimitiveObjectLiteral } from '$lib/typescript/utils/types';
 
 
 type StringTypeToType = {
@@ -15,26 +15,26 @@ type Primitives = keyof StringTypeToType;
 type PrimitiveGenerator<T extends Primitives> = (...args: any[]) => StringTypeToType[T];
 
 type DataType<T extends Primitives> = {
-    type: T,
-    new: PrimitiveGenerator<T>;
+    readonly type: T,
+    readonly new: PrimitiveGenerator<T>;
 };
 
 function createDataType<T extends Primitives>(type: T, generator: PrimitiveGenerator<T>): DataType<T> {
     return {
         type: type,
         new: generator
-    };
+    } as const;
 }
 
 function dataTypeFactory<T extends Primitives>(type: T, stringSize: number = 16): DataType<T> {
     if (isBoolean(type))
-        return createDataType(type, random.boolean);
+        return createDataType(type, Random.boolean);
 
     if (isNumber(type))
-        return createDataType(type, random.integer);
+        return createDataType(type, Random.integer);
 
     if (isString(type))
-        return createDataType(type, () => random.string(stringSize));
+        return createDataType(type, () => Random.string(stringSize));
 
     throw new Error(`Not implemented factory for '${type}' type`);
 }
@@ -46,11 +46,11 @@ type AttributeDefinition = {
 };
 
 class DataSchema {
-    #composition: [string, DataType<Primitives>][];
+    #composition: readonly (readonly [string, DataType<Primitives>])[];
 
     constructor(definition: AttributeDefinition[]) {
         this.#composition = definition.map(
-            attribute => [attribute.keyName, dataTypeFactory(attribute.valueType)]
+            attribute => [attribute.keyName, dataTypeFactory(attribute.valueType)] as const
         );
     }
 
@@ -74,7 +74,7 @@ class DataController {
     constructor(initialSchema?: DataSchema) {
         this.#schema = initialSchema ?? defaultDataSchema;
     }
-    
+
     get currentSchema() {
         return this.#schema;
     }

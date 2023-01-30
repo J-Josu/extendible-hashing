@@ -12,9 +12,9 @@
   <p>globalDepth: {$state.globalDepth} | lastBucket: {$state.incrementalId}</p>
   <ol class="buckets">
     <!-- {#each $data as bucket, i (bucket.id)} -->
-    {#each $data as bucket, i}
+    {#each $data as bucket, i (bucket.state.value.id)}
       <li>
-        <span>{i.toString(2)} </span>
+        <span>{i.toString(2)} {bucket.state.value.id} </span>
         <Bucket state={bucket.state.asStore} data={bucket.data.asStore} />
       </li>
     {/each}
@@ -41,5 +41,6 @@
   }
   li {
     display: flex;
+    border: 1px solid rgb(167, 251, 251);
   }
 </style>

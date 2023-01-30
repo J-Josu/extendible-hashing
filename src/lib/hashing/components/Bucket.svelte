@@ -10,7 +10,7 @@
 <div>
   <p>id: {$state.id} | depth: {$state.depth}</p>
   <div class="records">
-    {#each $data.items as record (record.identity)}
+    {#each $data.items as record (record.state.value.id)}
       <Record state={record.state.asStore} data={record.data.asStore} />
     {/each}
   </div>
